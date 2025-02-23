@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Conversation</title>
+<style>
+/* Updated CSS styles */
+body {
+font-family: Arial, sans-serif;
+margin: 0;
+padding: 0;
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+flex-direction: row;
+overflow: hidden;
+background-color: #222;
+}
+.tablet-container {
+display: flex;
+width: 100%;
+height: 100%;
+justify-content: space-evenly;
+padding: 20px;
+}
+.tablet {
+height: 970px; /* Decreased height of tablets */
+border-radius: 30px;
+box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+position: relative;
+overflow: hidden;
+background-color: #000;
+border: 1px solid #444;
+}
+.user1-tablet {
+width: 650px; /* Decreased breadth of User 1's tablet */
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+}
+.user2-tablet {
+width: 900px; /* Increased breadth of User 2's tablet */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+}
+.chat {
+color: white;
+border-radius: 15px;
+padding: 15px;
+width: 100%;
+height: 75%; /* Slightly increased height for chat section */
+box-sizing: border-box;
+display: flex;
+flex-direction: column;
+justify-content: flex-end;
+}
+.conversation {
+overflow-y: auto;
+flex-grow: 1;
+margin-bottom: 20px;
+padding-right: 10px;
+}
+.message {
+display: flex;
+margin: 10px 0;
+padding: 10px;
+border-radius: 8px;
+}
+.message.to {
+justify-content: flex-start;
+background-color: #333;
+}
+.message.from {
+justify-content: flex-start;
+background-color: #444;
+}
+.message .text {
+max-width: 70%;
+word-wrap: break-word;
+}
+.message .username {
+font-weight: bold;
+color: #ffcc00;
+margin-right: 10px;
+}
+.suggestions {
+color: white;
+border-left: 2px solid #444;
+border-radius: 15px;
+padding: 20px;
+width: 250px; /* Increased breadth of suggestions section */
+height: 100%;
+display: flex;
+flex-direction: column;
+box-sizing: border-box;
+}
+.suggestion-container {
+margin-bottom: 15px;
+}
+.suggestion-text {
+background-color: #333;
+color: white;
+border: none;
+padding: 10px;
+font-size: 14px;
+border-radius: 8px;
+resize: none;
+width: 100%;
+height: 80px; /* Increased height of suggestion text boxes */
+box-sizing: border-box;
+}
+.suggestion-button {
+background-color: #ffcc00;
+color: white;
+border: none;
+padding: 10px;
+font-size: 16px;
+border-radius: 8px;
+cursor: pointer;
+margin-top: 5px;
+width: 100%;
+}
+.suggestion-button:hover {
+background-color: #ffb300;
+}
+.convince-percentage {
+font-size: 14px;
+margin-top: 5px;
+font-weight: bold;
+color: #ffcc00;
+text-align: right;
+}
+textarea {
+width: 100%;
+height: 100px; /* Increased height of input text box */
+padding: 10px;
+font-size: 16px;
+margin-top: 10px;
+border-radius: 8px;
+border: 1px solid #444;
+box-sizing: border-box;
+background-color: #333;
+color: white;
+}
+textarea::placeholder {
+color: #bbb;
+}
+.send-button {
+background-color: #ffcc00;
+color: white;
+border: none;
+padding: 10px 20px;
+font-size: 16px;
+border-radius: 8px;
+cursor: pointer;
+margin-top: 10px;
+}
+.send-button:hover {
+background-color: #ffb300;
+}
+.tablet::before {
+content: '';
+position: absolute;
+top: -5px;
+left: -5px;
+right: -5px;
+bottom: -5px;
+border-radius: 35px;
+background: rgba(255, 255, 255, 0.2);
+box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+z-index: -1;
+}
+.overall-convince {
+font-size: 18px;
+font-weight: bold;
+color: #ffcc00;
+margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div class="tablet-container">
+<!-- User 1 Tablet -->
+<div class="tablet user1-tablet">
+<div class="chat">
+<h2>User 1</h2>
+<div class="conversation" id="user1-conversation"></div>
+<textarea id="user1-input" placeholder="Enter your response here..."></textarea>
+<button class="send-button" onclick="sendMessage('user1')">Send</button>
+</div>
+</div>
+<!-- User 2 Tablet -->
+<div class="tablet user2-tablet">
+<!-- Chat section on the left side for User 2 -->
+<div class="chat">
+<h2>User 2</h2>
+<div class="conversation" id="user2-conversation"></div>
+<textarea id="user2-input" placeholder="Enter your response here..."></textarea>
+<button class="send-button" onclick="sendMessage('user2')">Send</button>
+</div>
+<!-- Suggestions section on the right side for User 2 -->
+<div class="suggestions">
+<h2>Suggestions to Win Over User 1</h2>
+<div id="suggestions-container">
+<!-- Dynamic suggestions will be added here -->
+</div>
+<div class="overall-convince">Overall Convince Percentage: <span id="overall-percentage">87.67%</span></div>
+</div>
+</div>
+</div>
+<script>
+// Function to fetch AI-generated suggestions from the backend
+async function fetchSuggestions(message) {
+    try {
+        const response = await fetch('/get-suggestions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message }), // Send only the most recent message
+        });
+
+        const data = await response.json();
+        console.log("API Response:", data); // Debugging: Log the API response
+
+        // Update suggestion containers
+        const suggestionsContainer = document.getElementById('suggestions-container');
+        suggestionsContainer.innerHTML = ''; // Clear previous suggestions
+
+        if (!Array.isArray(data.suggestions)) {
+            console.error("Invalid suggestions format:", data);
+            return;
+        }
+
+        data.suggestions.forEach(suggestion => {
+            console.log("Processing suggestion:", suggestion); // Debugging: Log each suggestion
+
+            // Create a container for each suggestion
+            const suggestionContainer = document.createElement('div');
+            suggestionContainer.classList.add('suggestion-container');
+
+            // Add a text box for the suggestion
+            const suggestionText = document.createElement('textarea');
+            suggestionText.classList.add('suggestion-text');
+            suggestionText.value = suggestion.text;
+            suggestionText.readOnly = true; // Make the text box read-only
+
+            // Add a button to use the suggestion
+            const suggestionButton = document.createElement('button');
+            suggestionButton.classList.add('suggestion-button');
+            suggestionButton.innerText = 'Use Suggestion';
+            suggestionButton.onclick = () => addTextToChat(suggestion.text);
+
+            // Add convince percentage
+            const percentageDiv = document.createElement('div');
+            percentageDiv.classList.add('convince-percentage');
+            percentageDiv.innerText = `Convince Percentage: ${suggestion.convincePercentage}%`;
+
+            // Append elements to the container
+            suggestionContainer.appendChild(suggestionText);
+            suggestionContainer.appendChild(suggestionButton);
+            suggestionContainer.appendChild(percentageDiv);
+
+            // Append the container to the suggestions section
+            suggestionsContainer.appendChild(suggestionContainer);
+        });
+
+        // Update overall convince percentage
+        document.getElementById('overall-percentage').innerText = data.overallConvincePercentage + '%';
+    } catch (error) {
+        console.error('Error fetching suggestions:', error);
+    }
+}
+
+// Function to add text to User 2's input field
+function addTextToChat(suggestionText) {
+    const chatBox = document.getElementById("user2-input");
+    chatBox.value = suggestionText;
+}
+
+// Function to send messages
+function sendMessage(user) {
+    const inputField = document.getElementById(`${user}-input`);
+    const conversationBox = document.getElementById(`${user}-conversation`);
+    const message = inputField.value.trim(); // Trim whitespace from the message
+
+    if (!message) {
+        alert("Please enter a message before sending.");
+        return; // Exit the function if the message is empty
+    }
+
+    // Add message to the current user's chat with the user's name
+    const newMessage = document.createElement("div");
+    newMessage.classList.add("message");
+    newMessage.classList.add(user === 'user1' ? 'to' : 'from');
+    newMessage.innerHTML = `<strong class="username">${user === 'user1' ? 'User 1' : 'User 2'}:</strong> <div class="text">${message}</div>`;
+    conversationBox.appendChild(newMessage);
+
+    // Also add message to the other user's chat with opposite background
+    const otherUser = user === 'user1' ? 'user2' : 'user1';
+    const otherConversationBox = document.getElementById(`${otherUser}-conversation`);
+    const otherMessage = document.createElement("div");
+    otherMessage.classList.add("message");
+    otherMessage.classList.add(user === 'user1' ? 'from' : 'to');
+    otherMessage.innerHTML = `<strong class="username">${user === 'user1' ? 'User 1' : 'User 2'}:</strong> <div class="text">${message}</div>`;
+    otherConversationBox.appendChild(otherMessage);
+
+    inputField.value = ""; // Clear the input field after sending
+
+    // Automatically refresh suggestions based on the most recent message
+    fetchSuggestions(message);
+}
+</script>
+</body>
+</html>
